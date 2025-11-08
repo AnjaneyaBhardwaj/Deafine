@@ -1,0 +1,61 @@
+"""CLI interface using Typer."""
+
+import typer
+import asyncio
+
+from .main import run_app
+
+
+app = typer.Typer(
+    name="deafine",
+    help="Real-time multi-speaker transcription using ElevenLabs",
+    add_completion=False
+)
+
+
+@app.command()
+def run(
+    record: bool = typer.Option(
+        False,
+        "--record",
+        help="Save audio and transcript to disk"
+    )
+):
+    """
+    Run Deafine real-time transcription with ElevenLabs.
+    
+    Examples:
+    
+        # Basic usage:
+        deafine run
+        
+        # With recording:
+        deafine run --record
+    
+    Requirements:
+        - ELEVEN_API_KEY must be set in .env file
+    """
+    
+    typer.echo("🎤 Starting Deafine with ElevenLabs...")
+    typer.echo(f"   Recording: {'enabled' if record else 'disabled'}")
+    typer.echo()
+    
+    # Run the async app
+    try:
+        asyncio.run(run_app(record=record))
+    except KeyboardInterrupt:
+        typer.echo("\n\n👋 Goodbye!")
+    except Exception as e:
+        typer.echo(f"\n❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command()
+def version():
+    """Show version information."""
+    from . import __version__
+    typer.echo(f"Deafine v{__version__}")
+
+
+if __name__ == "__main__":
+    app()
