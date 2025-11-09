@@ -10,6 +10,7 @@ httpx>=0.25.0
 # Uncomment to enable (requires C++ compiler on Windows):
 # webrtcvad>=2.0.10
 
-# Optional: AI-powered summaries at end of session
+# Optional: AI-powered summaries with LangChain + OpenRouter
 # Uncomment to enable:
-# openai>=1.3.0
+langchain
+langchain-openai

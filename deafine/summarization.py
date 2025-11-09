@@ -1,4 +1,4 @@
-"""Generate summaries at end of session or periodically."""
+"""Generate summaries at end of session using LangChain + OpenRouter."""
 
 from typing import Dict, List, Optional
 from collections import defaultdict
@@ -7,12 +7,13 @@ import os
 from .config import Config
 from .events import TranscriptSegment
 
-# Try to import OpenAI (optional)
+# Try to import LangChain (optional)
 try:
-    from openai import OpenAI
-    OPENAI_AVAILABLE = True
+    from langchain_openai import ChatOpenAI
+    from langchain_core.messages import SystemMessage, HumanMessage
+    LANGCHAIN_AVAILABLE = True
 except ImportError:
-    OPENAI_AVAILABLE = False
+    LANGCHAIN_AVAILABLE = False
 
 
 class SessionSummarizer:
@@ -24,20 +25,29 @@ class SessionSummarizer:
         # Store all transcripts by speaker
         self.transcripts: Dict[str, List[TranscriptSegment]] = defaultdict(list)
         
-        # OpenAI client (if available)
-        self.openai_client = None
-        openai_key = os.getenv("OPENAI_API_KEY", "")
+        # LangChain LLM (if available)
+        self.llm = None
+        openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
         
-        if openai_key and OPENAI_AVAILABLE:
+        if openrouter_key and LANGCHAIN_AVAILABLE:
             try:
-                self.openai_client = OpenAI(api_key=openai_key)
-                print("✅ OpenAI available for summaries")
+                # Configure LangChain to use OpenRouter
+                model_name = os.getenv("OPENROUTER_MODEL", "mistralai/mistral-small-3.2-24b-instruct:free")
+                
+                self.llm = ChatOpenAI(
+                    model=model_name,
+                    openai_api_key=openrouter_key,
+                    openai_api_base="https://openrouter.ai/api/v1",
+                    temperature=0.3,
+                    max_tokens=150
+                )
+                print(f"✅ LangChain with OpenRouter available (model: {model_name})")
             except Exception as e:
-                print(f"⚠️  Could not initialize OpenAI: {e}")
-        elif not OPENAI_AVAILABLE:
-            print("ℹ️  OpenAI not installed (pip install openai for AI summaries)")
+                print(f"⚠️  Could not initialize LangChain: {e}")
+        elif not LANGCHAIN_AVAILABLE:
+            print("ℹ️  LangChain not installed (pip install langchain langchain-openai)")
         else:
-            print("ℹ️  OPENAI_API_KEY not set (summaries will be extractive)")
+            print("ℹ️  OPENROUTER_API_KEY not set (summaries will be extractive)")
     
     def add_transcript(self, segment: TranscriptSegment):
         """Add a transcript segment."""
@@ -75,8 +85,8 @@ class SessionSummarizer:
         # Overall conversation summary
         full_text = self.get_all_text()
         
-        if self.openai_client:
-            # AI summary
+        if self.llm:
+            # AI summary using LangChain + OpenRouter
             summaries["overall"] = self._generate_ai_summary(full_text, summary_type="overall")
         else:
             # Extractive summary
@@ -90,7 +100,7 @@ class SessionSummarizer:
                 summaries[speaker_id] = "Brief contribution"
                 continue
             
-            if self.openai_client:
+            if self.llm:
                 summaries[speaker_id] = self._generate_ai_summary(
                     speaker_text, 
                     summary_type="speaker",
@@ -107,7 +117,7 @@ class SessionSummarizer:
         summary_type: str = "overall",
         speaker_id: Optional[str] = None
     ) -> str:
-        """Generate AI summary using OpenAI."""
+        """Generate AI summary using LangChain + OpenRouter."""
         
         try:
             if summary_type == "overall":
@@ -122,17 +132,13 @@ class SessionSummarizer:
                     "Focus on their main points and contributions."
                 )
             
-            response = self.openai_client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": text}
-                ],
-                max_tokens=150,
-                temperature=0.3
-            )
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=text)
+            ]
             
-            return response.choices[0].message.content.strip()
+            response = self.llm.invoke(messages)
+            return response.content.strip()
             
         except Exception as e:
             print(f"⚠️  Error generating AI summary: {e}")
@@ -172,4 +178,3 @@ class SessionSummarizer:
             }
         
         return stats
-

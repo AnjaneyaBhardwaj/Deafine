@@ -162,13 +162,35 @@ When you stop the app (Ctrl+C), you'll see:
    Total Segments: 8
 ```
 
-### With OpenAI (Optional)
+### With AI Summaries (Optional - LangChain + OpenRouter)
 
-Install: `pip install openai`
+Install:
+```bash
+pip install langchain langchain-openai
+```
 
-Add to `.env`: `OPENAI_API_KEY=your_key`
+Get API key at: https://openrouter.ai/keys
 
-Gets **AI-powered summaries** instead of extractive summaries.
+Add to `.env`:
+```bash
+OPENROUTER_API_KEY=your_key
+OPENROUTER_MODEL=mistralai/mistral-small-3.2-24b-instruct:free  # FREE! or use any model from OpenRouter
+```
+
+**Benefits:**
+- ✅ Access to multiple AI providers (OpenAI, Anthropic, Google, Meta, etc.)
+- ✅ Often cheaper than direct OpenAI
+- ✅ Better summaries than extractive method
+- ✅ Choose your preferred model
+
+**Popular Models:**
+- `mistralai/mistral-small-3.2-24b-instruct:free` - **FREE!** Fast and good quality (default)
+- `openai/gpt-4o-mini` - Fast and cheap ($0.15/1M tokens)
+- `anthropic/claude-3-haiku` - Great quality, affordable
+- `google/gemini-pro` - Free tier available
+- `meta-llama/llama-3.1-8b-instruct:free` - Open source, free
+
+See all models: https://openrouter.ai/models
 
 ## Recording Output
 
