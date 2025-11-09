@@ -85,7 +85,7 @@ class ElevenLabsTranscriber:
             data = {
                 "model_id": "scribe_v1",
                 "diarize": "true",  # Enable speaker diarization
-                "num_speakers": "2",  # Allow up to 5 speakers
+                "num_speakers": 5",  # Allow up to 5 speakers
                 "timestamps_granularity": "word",
                 "file_format": "pcm_s16le_16",  # 16-bit PCM at 16kHz
             }
