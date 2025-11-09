@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "deafine"
+name = "audio-access"
 version = "0.2.1"
-description = "Real-time multi-speaker transcription using ElevenLabs API"
+description = "Real-time audio transcription for deaf and hard-of-hearing users"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
@@ -25,8 +25,8 @@ dependencies = [
 ]
 
 [project.scripts]
-deafine = "deafine.cli:app"
+audio-access = "audio_access.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["deafine*"]
+include = ["audio_access*"]

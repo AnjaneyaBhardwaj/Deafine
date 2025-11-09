@@ -7,8 +7,8 @@ from .main import run_app
 
 
 app = typer.Typer(
-    name="deafine",
-    help="Real-time multi-speaker transcription using ElevenLabs",
+    name="audio-access",
+    help="Real-time audio transcription for deaf and hard-of-hearing users",
     add_completion=False
 )
 
@@ -22,21 +22,21 @@ def run(
     )
 ):
     """
-    Run Deafine real-time transcription with ElevenLabs.
+    Run Audio Access real-time transcription with ElevenLabs.
     
     Examples:
     
         # Basic usage:
-        deafine run
+        audio-access run
         
         # With recording:
-        deafine run --record
+        audio-access run --record
     
     Requirements:
         - ELEVEN_API_KEY must be set in .env file
     """
     
-    typer.echo("🎤 Starting Deafine with ElevenLabs...")
+    typer.echo("🎤 Starting Audio Access with ElevenLabs...")
     typer.echo(f"   Recording: {'enabled' if record else 'disabled'}")
     typer.echo()
     
@@ -54,7 +54,7 @@ def run(
 def version():
     """Show version information."""
     from . import __version__
-    typer.echo(f"Deafine v{__version__}")
+    typer.echo(f"Audio Access v{__version__}")
 
 
 if __name__ == "__main__":

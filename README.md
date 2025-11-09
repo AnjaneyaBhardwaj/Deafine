@@ -43,6 +43,7 @@ cp env.template .env
 
 1. Get your API key from https://elevenlabs.io
 2. Edit `.env` and add your key:
+
 ```bash
 ELEVEN_API_KEY=your_key_here
 ```
@@ -50,23 +51,27 @@ ELEVEN_API_KEY=your_key_here
 ### Running
 
 Basic usage:
+
 ```bash
-deafine run
+audio-access run
 ```
 
 With recording enabled:
+
 ```bash
-deafine run --record
+audio-access run --record
 ```
 
 ### Running as API Server
 
 Start the FastAPI server:
+
 ```bash
-uvicorn deafine.api:app --reload --host 0.0.0.0 --port 8000
+uvicorn audio_access.api:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Or with Docker:
+
 ```bash
 docker-compose up --build
 ```
@@ -74,12 +79,14 @@ docker-compose up --build
 API will be available at `http://localhost:8000`
 
 **REST API Endpoints:**
+
 - `POST /transcribe` - Upload audio file for transcription
 - `POST /transcribe/stream` - Async transcription for large files
 - `GET /health` - Health check
 - `GET /docs` - Interactive Swagger UI
 
 **WebSocket API:**
+
 - `ws://localhost:8000/ws/transcribe` - Real-time audio streaming
 - `GET /ws/sessions` - List active WebSocket sessions
 
@@ -88,6 +95,7 @@ See [WEBSOCKET_API.md](WEBSOCKET_API.md) for WebSocket integration guide.
 ## How It Works
 
 ### Console Mode (Local Microphone)
+
 ```
 Microphone → [Optional VAD] → ElevenLabs API → Live Transcription with Speakers
 ```
@@ -98,6 +106,7 @@ Microphone → [Optional VAD] → ElevenLabs API → Live Transcription with Spe
 4. **Display**: Shows live output in console
 
 ### WebSocket Mode (Browser/Frontend)
+
 ```
 Browser Mic → WebSocket → FastAPI → ElevenLabs API → WebSocket → Frontend Display
 ```
@@ -122,11 +131,13 @@ See [WEBSOCKET_API.md](WEBSOCKET_API.md) for integration details.
 To save ~60% bandwidth and API costs, install webrtcvad:
 
 **Linux/Mac:**
+
 ```bash
 pip install webrtcvad
 ```
 
 **Windows:** Requires Microsoft C++ Build Tools
+
 ```bash
 # Install from: https://visualstudio.microsoft.com/visual-cpp-build-tools/
 # Then:
@@ -140,8 +151,9 @@ The app works fine without VAD - it just sends all audio instead of filtering si
 ## CLI Options
 
 **Console Mode:**
+
 ```bash
-deafine run [OPTIONS]
+audio-access run [OPTIONS]
 
 Options:
   --record    Save audio and transcript to disk
@@ -149,9 +161,10 @@ Options:
 ```
 
 **API Mode:**
+
 ```bash
 # Start API server
-uvicorn deafine.api:app --reload
+uvicorn audio_access.api:app --reload
 
 # Or with Docker
 docker-compose up
@@ -217,6 +230,7 @@ When you stop the app (Ctrl+C), you'll see:
 ### With AI Summaries (Optional - LangChain + OpenRouter)
 
 Install:
+
 ```bash
 pip install langchain langchain-openai
 ```
@@ -224,18 +238,21 @@ pip install langchain langchain-openai
 Get API key at: https://openrouter.ai/keys
 
 Add to `.env`:
+
 ```bash
 OPENROUTER_API_KEY=your_key
 OPENROUTER_MODEL=mistralai/mistral-small-3.2-24b-instruct:free  # FREE! or use any model from OpenRouter
 ```
 
 **Benefits:**
+
 - ✅ Access to multiple AI providers (OpenAI, Anthropic, Google, Meta, etc.)
 - ✅ Often cheaper than direct OpenAI
 - ✅ Better summaries than extractive method
 - ✅ Choose your preferred model
 
 **Popular Models:**
+
 - `mistralai/mistral-small-3.2-24b-instruct:free` - **FREE!** Fast and good quality (default)
 - `openai/gpt-4o-mini` - Fast and cheap ($0.15/1M tokens)
 - `anthropic/claude-3-haiku` - Great quality, affordable
@@ -247,6 +264,7 @@ See all models: https://openrouter.ai/models
 ## Recording Output
 
 When using `--record`, three files are created:
+
 - `session_YYYYMMDD_HHMMSS.wav` - Audio recording
 - `session_YYYYMMDD_HHMMSS_transcript.jsonl` - Transcript with timestamps
 - `session_YYYYMMDD_HHMMSS_summary.md` - Session summary (generated on close)
@@ -254,26 +272,30 @@ When using `--record`, three files are created:
 ## Troubleshooting
 
 **"ELEVEN_API_KEY is required"**
+
 - Make sure you've created `.env` file with your ElevenLabs API key
 
 **No audio detected**
+
 - Check microphone is connected and not muted
 - Try different microphone if available
 
 **Slow transcription**
+
 - Normal behavior - transcription happens every 5 seconds
 - Adjust `DEAFINE_ELEVENLABS_CHUNK_SECS` in `.env` for faster updates (uses more API calls)
 
 **Want to reduce API costs?**
+
 - Install webrtcvad: `pip install webrtcvad`
 - Saves ~60% by filtering silence
 
 ## Cost Optimization
 
-| Mode | Bandwidth | API Costs | Installation |
-|------|-----------|-----------|--------------|
-| **Without VAD** | 100% | Higher | ✅ Easy (no build tools) |
-| **With VAD** | ~40% | Lower | ⚠️ Needs compiler (Windows) |
+| Mode            | Bandwidth | API Costs | Installation                |
+| --------------- | --------- | --------- | --------------------------- |
+| **Without VAD** | 100%      | Higher    | ✅ Easy (no build tools)    |
+| **With VAD**    | ~40%      | Lower     | ⚠️ Needs compiler (Windows) |
 
 ## License
 

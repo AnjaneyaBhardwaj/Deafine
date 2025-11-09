@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  deafine-api:
+  audio-access-api:
     build: .
     ports:
       - "8000:8000"

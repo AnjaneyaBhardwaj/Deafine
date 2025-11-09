@@ -84,7 +84,7 @@ class ConsoleUI:
         # Create panel with title
         elapsed = time.time() - self.start_time
         mins, secs = divmod(int(elapsed), 60)
-        title = f"🎤 Deafine - Live Transcription (ElevenLabs) [{mins:02d}:{secs:02d}]"
+        title = f"🎤 Audio Access - Live Transcription (ElevenLabs) [{mins:02d}:{secs:02d}]"
         
         panel = Panel(
             table,
@@ -106,7 +106,7 @@ class ConsoleUI:
         self.live.start()
         
         # Print welcome message
-        self.console.print("\n[bold green]🎤 Deafine started with ElevenLabs![/bold green]")
+        self.console.print("\n[bold green]🎤 Audio Access started with ElevenLabs![/bold green]")
         self.console.print("[dim]Listening for speakers...[/dim]\n")
     
     def update(self):
@@ -119,7 +119,7 @@ class ConsoleUI:
         if self.live:
             self.live.stop()
         
-        self.console.print("\n[bold yellow]🛑 Deafine stopped[/bold yellow]")
+        self.console.print("\n[bold yellow]🛑 Audio Access stopped[/bold yellow]")
     
     def print_info(self, message: str):
         """Print info message."""

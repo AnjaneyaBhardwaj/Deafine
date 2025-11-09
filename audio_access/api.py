@@ -20,8 +20,8 @@ from .events import AudioFrame, TranscriptSegment
 
 # Initialize FastAPI
 app = FastAPI(
-    title="Deafine API",
-    description="Real-time multi-speaker transcription API using ElevenLabs",
+    title="Audio Access API",
+    description="Real-time multi-speaker transcription API for deaf and hard-of-hearing users",
     version="0.2.0",
     docs_url="/docs",
     redoc_url="/redoc"
@@ -454,19 +454,22 @@ websocket_sessions: Dict[str, Dict] = {}
 @app.websocket("/ws/transcribe")
 async def websocket_transcribe(websocket: WebSocket):
     """
-    WebSocket endpoint for real-time audio transcription.
+    WebSocket endpoint for real-time audio transcription with haptic feedback.
     
     Protocol:
     1. Client connects
     2. Server sends: {"type": "connected", "session_id": "..."}
-    3. Client sends: binary audio chunks (PCM 16-bit, 16kHz, mono)
-    4. Server sends: {"type": "transcript", "segment": {...}}
-    5. Server sends: {"type": "status", "message": "..."}
-    6. On disconnect: {"type": "summary", "data": {...}}
+    3. Client sends: {"type": "config", "user_name": "John"} (optional, for haptics)
+    4. Client sends: binary audio chunks (PCM 16-bit, 16kHz, mono)
+    5. Server sends: {"type": "transcript", "segment": {...}}
+    6. Server sends: {"type": "haptic", "reason": "name_mentioned"} (if name detected)
+    7. Server sends: {"type": "status", "message": "..."}
+    8. On disconnect: {"type": "summary", "data": {...}}
     """
     
     await websocket.accept()
     session_id = create_session_id()
+    user_name = None  # User's name for haptic feedback
     
     # Initialize session
     try:
@@ -487,7 +490,8 @@ async def websocket_transcribe(websocket: WebSocket):
             "transcriber": transcriber,
             "summarizer": summarizer,
             "timestamp": 0.0,
-            "connected_at": datetime.now().isoformat()
+            "connected_at": datetime.now().isoformat(),
+            "user_name": None  # For haptic feedback
         }
         
         # Send connection confirmation
@@ -542,6 +546,12 @@ async def websocket_transcribe(websocket: WebSocket):
                             # Add to summarizer
                             summarizer.add_transcript(segment)
                             
+                            # Check for name mention (haptic trigger)
+                            name_mentioned = False
+                            user_name = websocket_sessions[session_id].get("user_name")
+                            if user_name and user_name.lower() in segment.text.lower():
+                                name_mentioned = True
+                            
                             # Send transcript segment
                             await websocket.send_json({
                                 "type": "transcript",
@@ -549,9 +559,21 @@ async def websocket_transcribe(websocket: WebSocket):
                                     "speaker_id": segment.speaker_id,
                                     "text": segment.text,
                                     "start_time": segment.start_time,
-                                    "end_time": segment.end_time
+                                    "end_time": segment.end_time,
+                                    "haptic": name_mentioned  # Trigger haptic if name mentioned
                                 }
                             })
+                            
+                            # Send separate haptic event for stronger feedback
+                            if name_mentioned:
+                                await websocket.send_json({
+                                    "type": "haptic",
+                                    "reason": "name_mentioned",
+                                    "text": segment.text,
+                                    "speaker_id": segment.speaker_id,
+                                    "user_name": user_name
+                                })
+                                print(f"📳 [{session_id}] HAPTIC: {user_name} mentioned by {segment.speaker_id}")
                             
                             print(f"📝 [{session_id}] {segment.speaker_id}: {segment.text}")
                 
@@ -564,6 +586,17 @@ async def websocket_transcribe(websocket: WebSocket):
                             "type": "pong",
                             "timestamp": websocket_sessions[session_id]["timestamp"]
                         })
+                    
+                    elif message.get("command") == "set_name":
+                        # Set user name for haptic feedback
+                        user_name = message.get("user_name", "").strip()
+                        websocket_sessions[session_id]["user_name"] = user_name
+                        await websocket.send_json({
+                            "type": "config_confirmed",
+                            "user_name": user_name,
+                            "message": f"Haptic feedback enabled for name: {user_name}"
+                        })
+                        print(f"👤 [{session_id}] User name set: {user_name}")
                     
                     elif message.get("command") == "get_summary":
                         # Generate and send summary
