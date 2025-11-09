@@ -9,3 +9,7 @@ httpx>=0.25.0
 # Optional: Voice Activity Detection (saves bandwidth/costs)
 # Uncomment to enable (requires C++ compiler on Windows):
 # webrtcvad>=2.0.10
+
+# Optional: AI-powered summaries at end of session
+# Uncomment to enable:
+# openai>=1.3.0

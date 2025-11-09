@@ -6,9 +6,10 @@
 
 - 🎤 **Real-time microphone capture** 
 - 👥 **Automatic multi-speaker detection** (S1, S2, S3...) via ElevenLabs
-- 📝 **Live transcription** with speaker labels
+- 📝 **Live transcription** with speaker labels (full text, not summarized)
 - 🔀 **Overlap detection** when multiple speakers talk simultaneously
 - 💾 **Optional recording** to save audio and transcripts
+- 📊 **Session summaries** - Generated when closing (overall + per-speaker)
 - ⚡ **Simple and fast** - no local ML models, no build tools required
 - 💰 **Optional VAD** - Save bandwidth and API costs (if webrtcvad installed)
 
@@ -135,11 +136,46 @@ DEAFINE_CHUNK_MS=320
 DEAFINE_HOP_MS=160
 ```
 
+## Session Summaries
+
+When you stop the app (Ctrl+C), you'll see:
+
+```
+📊 SESSION SUMMARY
+======================================================================
+
+📝 Overall Conversation:
+   Discussion about testing the Deafine app and confirming it works.
+
+👥 Speaker Summaries:
+
+   S1:
+      Initiated testing of the application and asked for confirmation.
+      (45 words, 12.3s speaking time)
+
+   S2:
+      Confirmed the application is working correctly.
+      (23 words, 6.1s speaking time)
+
+📈 Statistics:
+   Total Speakers: 2
+   Total Segments: 8
+```
+
+### With OpenAI (Optional)
+
+Install: `pip install openai`
+
+Add to `.env`: `OPENAI_API_KEY=your_key`
+
+Gets **AI-powered summaries** instead of extractive summaries.
+
 ## Recording Output
 
-When using `--record`, two files are created:
+When using `--record`, three files are created:
 - `session_YYYYMMDD_HHMMSS.wav` - Audio recording
 - `session_YYYYMMDD_HHMMSS_transcript.jsonl` - Transcript with timestamps
+- `session_YYYYMMDD_HHMMSS_summary.md` - Session summary (generated on close)
 
 ## Troubleshooting
 

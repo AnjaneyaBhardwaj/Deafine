@@ -10,6 +10,7 @@ from .audio_capture import AudioCapture
 from .elevenlabs import ElevenLabsTranscriber
 from .recorder import Recorder
 from .console_ui import ConsoleUI
+from .summarization import SessionSummarizer
 from .events import *
 
 
@@ -27,6 +28,7 @@ class DeafineApp:
         # Components
         self.audio_capture = AudioCapture(config)
         self.transcriber = ElevenLabsTranscriber(config)
+        self.summarizer = SessionSummarizer(config)
         self.ui = ConsoleUI()
         
         # Optional components
@@ -99,6 +101,9 @@ class DeafineApp:
                         # Track active speakers
                         self.active_speakers[segment.speaker_id] = frame.timestamp
                         
+                        # Add to summarizer
+                        self.summarizer.add_transcript(segment)
+                        
                         # Record segment
                         if self.recorder:
                             self.recorder.log_transcript(segment)
@@ -130,12 +135,88 @@ class DeafineApp:
         self.ui.stop()
         self.audio_capture.stop()
         
+        # Generate session summary before closing
+        print("\n" + "="*70)
+        print("📊 SESSION SUMMARY")
+        print("="*70)
+        
+        summaries = self.summarizer.generate_session_summary()
+        stats = self.summarizer.get_stats()
+        
+        # Print overall summary
+        if "overall" in summaries:
+            print("\n📝 Overall Conversation:")
+            print(f"   {summaries['overall']}")
+        
+        # Print per-speaker summaries
+        print("\n👥 Speaker Summaries:")
+        for speaker_id in sorted(summaries.keys()):
+            if speaker_id == "overall":
+                continue
+            
+            print(f"\n   {speaker_id}:")
+            print(f"      {summaries[speaker_id]}")
+            
+            if speaker_id in stats["speakers"]:
+                speaker_stats = stats["speakers"][speaker_id]
+                print(f"      ({speaker_stats['words']} words, "
+                      f"{speaker_stats['duration_seconds']}s speaking time)")
+        
+        # Print statistics
+        print(f"\n📈 Statistics:")
+        print(f"   Total Speakers: {stats['total_speakers']}")
+        print(f"   Total Segments: {stats['total_segments']}")
+        
+        print("\n" + "="*70)
+        
+        # Save summary to file if recording
+        if self.recorder:
+            self._save_summary_to_file(summaries, stats)
+        
+        # Close other components
         if self.recorder:
             self.recorder.close()
         
         await self.transcriber.close()
         
-        print("Deafine shutdown complete.")
+        print("\n✅ Deafine shutdown complete.")
+    
+    def _save_summary_to_file(self, summaries: Dict, stats: Dict):
+        """Save summary to markdown file."""
+        try:
+            summary_file = self.recorder.output_dir / f"{self.recorder.session_id}_summary.md"
+            
+            with open(summary_file, 'w', encoding='utf-8') as f:
+                f.write(f"# Session Summary: {self.recorder.session_id}\n\n")
+                
+                # Overall summary
+                f.write("## Overall Conversation\n\n")
+                f.write(f"{summaries.get('overall', 'No summary available.')}\n\n")
+                
+                # Speaker summaries
+                f.write("## Speaker Summaries\n\n")
+                for speaker_id in sorted(summaries.keys()):
+                    if speaker_id == "overall":
+                        continue
+                    
+                    f.write(f"### {speaker_id}\n\n")
+                    f.write(f"{summaries[speaker_id]}\n\n")
+                    
+                    if speaker_id in stats["speakers"]:
+                        speaker_stats = stats["speakers"][speaker_id]
+                        f.write(f"- **Words spoken:** {speaker_stats['words']}\n")
+                        f.write(f"- **Speaking time:** {speaker_stats['duration_seconds']}s\n")
+                        f.write(f"- **Segments:** {speaker_stats['segments']}\n\n")
+                
+                # Statistics
+                f.write("## Session Statistics\n\n")
+                f.write(f"- **Total Speakers:** {stats['total_speakers']}\n")
+                f.write(f"- **Total Segments:** {stats['total_segments']}\n")
+            
+            print(f"💾 Summary saved: {summary_file}")
+            
+        except Exception as e:
+            print(f"⚠️  Could not save summary: {e}")
 
 
 async def run_app(record: bool = False):
