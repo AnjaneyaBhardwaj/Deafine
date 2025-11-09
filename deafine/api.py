@@ -1,6 +1,6 @@
 """FastAPI wrapper for Deafine transcription service."""
 
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException, BackgroundTasks
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -9,6 +9,8 @@ from datetime import datetime
 import asyncio
 import uuid
 import os
+import json
+import numpy as np
 from pathlib import Path
 
 from .config import Config
@@ -439,6 +441,198 @@ async def list_sessions():
                 "segments_count": len(data.get("segments", []))
             }
             for sid, data in active_sessions.items()
+        ]
+    }
+
+
+# ==================== WebSocket Endpoints ====================
+
+# Store active WebSocket connections
+websocket_sessions: Dict[str, Dict] = {}
+
+
+@app.websocket("/ws/transcribe")
+async def websocket_transcribe(websocket: WebSocket):
+    """
+    WebSocket endpoint for real-time audio transcription.
+    
+    Protocol:
+    1. Client connects
+    2. Server sends: {"type": "connected", "session_id": "..."}
+    3. Client sends: binary audio chunks (PCM 16-bit, 16kHz, mono)
+    4. Server sends: {"type": "transcript", "segment": {...}}
+    5. Server sends: {"type": "status", "message": "..."}
+    6. On disconnect: {"type": "summary", "data": {...}}
+    """
+    
+    await websocket.accept()
+    session_id = create_session_id()
+    
+    # Initialize session
+    try:
+        config = Config()
+        if not config.eleven_api_key:
+            await websocket.send_json({
+                "type": "error",
+                "message": "ELEVEN_API_KEY not configured on server"
+            })
+            await websocket.close()
+            return
+        
+        transcriber = ElevenLabsTranscriber(config)
+        summarizer = SessionSummarizer(config)
+        
+        # Store session
+        websocket_sessions[session_id] = {
+            "transcriber": transcriber,
+            "summarizer": summarizer,
+            "timestamp": 0.0,
+            "connected_at": datetime.now().isoformat()
+        }
+        
+        # Send connection confirmation
+        await websocket.send_json({
+            "type": "connected",
+            "session_id": session_id,
+            "message": "WebSocket connected. Send PCM audio data (16-bit, 16kHz, mono)"
+        })
+        
+        print(f"🔌 WebSocket connected: {session_id}")
+        
+        # Main message loop
+        try:
+            while True:
+                # Receive audio data (binary)
+                data = await websocket.receive()
+                
+                if "bytes" in data:
+                    # Binary audio data received
+                    audio_bytes = data["bytes"]
+                    
+                    # Convert to numpy array (assuming 16-bit PCM)
+                    audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
+                    
+                    # Create audio frame
+                    frame = AudioFrame(
+                        timestamp=websocket_sessions[session_id]["timestamp"],
+                        pcm_bytes=audio_bytes,
+                        sample_rate=16000
+                    )
+                    
+                    # Update timestamp (samples / sample_rate)
+                    websocket_sessions[session_id]["timestamp"] += len(audio_array) / 16000.0
+                    
+                    # Add to transcriber buffer
+                    await transcriber.add_audio(frame)
+                    
+                    # Check if we should process
+                    if await transcriber.should_process(frame.timestamp):
+                        # Send processing status
+                        await websocket.send_json({
+                            "type": "status",
+                            "message": "Processing audio...",
+                            "timestamp": frame.timestamp
+                        })
+                        
+                        # Process buffer
+                        segments = await transcriber.process_buffer()
+                        
+                        # Send each segment back to client
+                        for segment in segments:
+                            # Add to summarizer
+                            summarizer.add_transcript(segment)
+                            
+                            # Send transcript segment
+                            await websocket.send_json({
+                                "type": "transcript",
+                                "segment": {
+                                    "speaker_id": segment.speaker_id,
+                                    "text": segment.text,
+                                    "start_time": segment.start_time,
+                                    "end_time": segment.end_time
+                                }
+                            })
+                            
+                            print(f"📝 [{session_id}] {segment.speaker_id}: {segment.text}")
+                
+                elif "text" in data:
+                    # Text message (commands)
+                    message = json.loads(data["text"])
+                    
+                    if message.get("command") == "ping":
+                        await websocket.send_json({
+                            "type": "pong",
+                            "timestamp": websocket_sessions[session_id]["timestamp"]
+                        })
+                    
+                    elif message.get("command") == "get_summary":
+                        # Generate and send summary
+                        summary = summarizer.generate_session_summary()
+                        stats = summarizer.get_stats()
+                        
+                        await websocket.send_json({
+                            "type": "summary",
+                            "data": {
+                                "summary": summary,
+                                "stats": stats
+                            }
+                        })
+        
+        except WebSocketDisconnect:
+            print(f"🔌 WebSocket disconnected: {session_id}")
+            
+            # Generate final summary
+            if summarizer.transcripts:
+                summary = summarizer.generate_session_summary()
+                stats = summarizer.get_stats()
+                
+                try:
+                    await websocket.send_json({
+                        "type": "summary",
+                        "data": {
+                            "summary": summary,
+                            "stats": stats
+                        }
+                    })
+                except:
+                    pass  # Connection already closed
+            
+            # Cleanup
+            await transcriber.close()
+            if session_id in websocket_sessions:
+                del websocket_sessions[session_id]
+    
+    except Exception as e:
+        print(f"❌ WebSocket error: {e}")
+        try:
+            await websocket.send_json({
+                "type": "error",
+                "message": str(e)
+            })
+        except:
+            pass
+        
+        # Cleanup
+        if session_id in websocket_sessions:
+            try:
+                await websocket_sessions[session_id]["transcriber"].close()
+            except:
+                pass
+            del websocket_sessions[session_id]
+
+
+@app.get("/ws/sessions")
+async def list_websocket_sessions():
+    """List active WebSocket sessions."""
+    return {
+        "total": len(websocket_sessions),
+        "sessions": [
+            {
+                "session_id": sid,
+                "connected_at": data["connected_at"],
+                "duration": data["timestamp"]
+            }
+            for sid, data in websocket_sessions.items()
         ]
     }
 

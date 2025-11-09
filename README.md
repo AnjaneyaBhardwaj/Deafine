@@ -4,13 +4,14 @@
 
 ## Features
 
-- 🎤 **Real-time microphone capture** 
+- 🎤 **Real-time microphone capture** (Console mode)
+- 🌐 **WebSocket API** - Stream audio from browser for live transcription
 - 👥 **Automatic multi-speaker detection** (S1, S2, S3...) via ElevenLabs
 - 📝 **Live transcription** with speaker labels (full text, not summarized)
 - 🔀 **Overlap detection** when multiple speakers talk simultaneously
 - 💾 **Optional recording** to save audio and transcripts
 - 📊 **Session summaries** - Generated when closing (overall + per-speaker)
-- 🚀 **FastAPI REST API** - Deploy as a web service
+- 🚀 **FastAPI REST API** - Upload audio files or stream via WebSocket
 - ⚡ **Simple and fast** - no local ML models, no build tools required
 - 💰 **Optional VAD** - Save bandwidth and API costs (if webrtcvad installed)
 
@@ -72,16 +73,21 @@ docker-compose up --build
 
 API will be available at `http://localhost:8000`
 
-**API Endpoints:**
+**REST API Endpoints:**
 - `POST /transcribe` - Upload audio file for transcription
 - `POST /transcribe/stream` - Async transcription for large files
 - `GET /health` - Health check
 - `GET /docs` - Interactive Swagger UI
 
-See [API_USAGE.md](API_USAGE.md) for full API documentation.
+**WebSocket API:**
+- `ws://localhost:8000/ws/transcribe` - Real-time audio streaming
+- `GET /ws/sessions` - List active WebSocket sessions
+
+See [WEBSOCKET_API.md](WEBSOCKET_API.md) for WebSocket integration guide.
 
 ## How It Works
 
+### Console Mode (Local Microphone)
 ```
 Microphone → [Optional VAD] → ElevenLabs API → Live Transcription with Speakers
 ```
@@ -90,6 +96,19 @@ Microphone → [Optional VAD] → ElevenLabs API → Live Transcription with Spe
 2. **VAD (Optional)**: Filters silence to save bandwidth (if installed)
 3. **ElevenLabs**: Transcribes and identifies speakers (sent every 5 seconds)
 4. **Display**: Shows live output in console
+
+### WebSocket Mode (Browser/Frontend)
+```
+Browser Mic → WebSocket → FastAPI → ElevenLabs API → WebSocket → Frontend Display
+```
+
+1. **Frontend**: Captures audio from browser microphone (16kHz, 16-bit PCM)
+2. **WebSocket**: Streams audio chunks to backend in real-time
+3. **ElevenLabs**: Backend processes audio and identifies speakers
+4. **WebSocket**: Backend streams transcript segments back to frontend
+5. **Frontend**: Displays live transcription with speaker labels
+
+See [WEBSOCKET_API.md](WEBSOCKET_API.md) for integration details.
 
 ## Requirements
 
