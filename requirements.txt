@@ -10,8 +10,6 @@ httpx>=0.25.0
 # Uncomment to enable (requires C++ compiler on Windows):
 # webrtcvad>=2.0.10
 
-# Optional: AI-powered summaries with LangChain + OpenRouter
-# Uncomment to enable:
 langchain
 langchain-openai
 

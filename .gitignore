@@ -1,3 +1,8 @@
+# Environment variables
+.env
+.env.*
+!env.template
+
 # Python
 __pycache__/
 *.py[cod]
@@ -19,15 +24,13 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # Virtual environments
-.venv/
+.venv
 venv/
 ENV/
 env/
-
-# Environment variables
-.env
 
 # IDE
 .vscode/
@@ -36,18 +39,28 @@ env/
 *.swo
 *~
 
-# Recordings
-session*.wav
-*events*.jsonl
-
-# Model caches
-.cache/
-models/
-__pycache__/
-
-# Jupyter
-*.ipynb_checkpoints/
-
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Uploads
+uploads/
+*.wav
+*.mp3
+*.m4a
+
+# Session data
+session_*.jsonl
+session_*.md
+
+# Docker
+.dockerignore
+
+# Misc
+.pytest_cache/
+.coverage
+htmlcov/
