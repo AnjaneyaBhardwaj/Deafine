@@ -31,5 +31,5 @@ EXPOSE 8000
 #     CMD python -c "import requests; requests.get('http://localhost:8000/health')"
 
 # Run API server (Render provides PORT env var)
-CMD uvicorn audio_access.api:app --host ${HOST:-127.0.0.1} --port ${PORT:-8000}
+CMD uvicorn audio_access.api:app --host ${HOST:-0.0.0.0} --port ${PORT:-8000}
 
