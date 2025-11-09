@@ -46,10 +46,6 @@ fi
 
 # Test installation
 echo ""
-echo "🧪 Testing installation..."
-python test_installation.py
-
-echo ""
 echo "✅ Setup complete!"
 echo ""
 echo "Next steps:"

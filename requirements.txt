@@ -14,3 +14,8 @@ httpx>=0.25.0
 # Uncomment to enable:
 langchain
 langchain-openai
+
+fastapi
+uvicorn[standard]
+python-multipart
+scipy

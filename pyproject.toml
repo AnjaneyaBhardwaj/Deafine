@@ -18,6 +18,10 @@ dependencies = [
     "httpx>=0.25.0",
     "langchain>=0.3.27",
     "langchain-openai>=0.3.35",
+    "fastapi>=0.121.1",
+    "uvicorn[standard]>=0.38.0",
+    "python-multipart>=0.0.20",
+    "scipy>=1.13.1",
 ]
 
 [project.scripts]

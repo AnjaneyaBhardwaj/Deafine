@@ -10,6 +10,7 @@
 - 🔀 **Overlap detection** when multiple speakers talk simultaneously
 - 💾 **Optional recording** to save audio and transcripts
 - 📊 **Session summaries** - Generated when closing (overall + per-speaker)
+- 🚀 **FastAPI REST API** - Deploy as a web service
 - ⚡ **Simple and fast** - no local ML models, no build tools required
 - 💰 **Optional VAD** - Save bandwidth and API costs (if webrtcvad installed)
 
@@ -57,6 +58,28 @@ With recording enabled:
 deafine run --record
 ```
 
+### Running as API Server
+
+Start the FastAPI server:
+```bash
+uvicorn deafine.api:app --reload --host 0.0.0.0 --port 8000
+```
+
+Or with Docker:
+```bash
+docker-compose up --build
+```
+
+API will be available at `http://localhost:8000`
+
+**API Endpoints:**
+- `POST /transcribe` - Upload audio file for transcription
+- `POST /transcribe/stream` - Async transcription for large files
+- `GET /health` - Health check
+- `GET /docs` - Interactive Swagger UI
+
+See [API_USAGE.md](API_USAGE.md) for full API documentation.
+
 ## How It Works
 
 ```
@@ -97,12 +120,22 @@ The app works fine without VAD - it just sends all audio instead of filtering si
 
 ## CLI Options
 
+**Console Mode:**
 ```bash
 deafine run [OPTIONS]
 
 Options:
   --record    Save audio and transcript to disk
   --help      Show help message
+```
+
+**API Mode:**
+```bash
+# Start API server
+uvicorn deafine.api:app --reload
+
+# Or with Docker
+docker-compose up
 ```
 
 ## Display
