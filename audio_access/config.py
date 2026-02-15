@@ -23,7 +23,12 @@ class Config:
     vad_aggressiveness: int = int(os.getenv("DEAFINE_VAD_AGGRESSIVENESS", "2"))
 
     # ElevenLabs settings
-    elevenlabs_chunk_duration: int = int(os.getenv("DEAFINE_ELEVENLABS_CHUNK_SECS", "5"))
+    elevenlabs_chunk_duration: int = int(
+        os.getenv("DEAFINE_ELEVENLABS_CHUNK_SECS", "5")
+    )
+    use_voice_isolation: bool = (
+        os.getenv("DEAFINE_USE_VOICE_ISOLATION", "true").lower() == "true"
+    )
 
     # Audio settings
     sample_rate: int = 16000

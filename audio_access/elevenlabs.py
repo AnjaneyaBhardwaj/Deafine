@@ -2,7 +2,10 @@
 
 import httpx
 import numpy as np
+import soundfile as sf
 from typing import Dict, List
+from io import BytesIO
+from elevenlabs.client import ElevenLabs
 from .config import Config
 from .events import AudioFrame, TranscriptSegment
 
@@ -19,6 +22,7 @@ class ElevenLabsTranscriber:
             raise ValueError("ELEVEN_API_KEY not set")
 
         self.client = httpx.AsyncClient(timeout=60.0)
+        self.elevenlabs_client = ElevenLabs(api_key=self.api_key)
 
         # Buffer for chunked audio
         self.audio_buffer: List[AudioFrame] = []
@@ -46,6 +50,36 @@ class ElevenLabsTranscriber:
         time_since_last = current_time - self.last_sent_time
         return time_since_last >= self.chunk_duration and len(self.audio_buffer) > 0
 
+    async def isolate_voice(self, audio_bytes: bytes) -> bytes:
+        """Isolate voice from audio using ElevenLabs Voice Isolator API."""
+        try:
+            # Convert raw PCM bytes to numpy array
+            audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
+            
+            # Convert to float32 in range [-1.0, 1.0] for soundfile
+            audio_float = audio_array.astype(np.float32) / 32768.0
+            
+            # Create a WAV file in memory with proper headers
+            wav_buffer = BytesIO()
+            sf.write(wav_buffer, audio_float, self.config.sample_rate, format='WAV', subtype='PCM_16')
+            wav_buffer.seek(0)
+            
+            # Use the official ElevenLabs SDK for voice isolation
+            # Note: The SDK method is synchronous, but it's fast enough for our use case
+            isolated_audio_stream = self.elevenlabs_client.audio_isolation.convert(
+                audio=wav_buffer
+            )
+            
+            # Read the isolated audio stream (it returns an iterator of bytes)
+            isolated_bytes = b"".join(isolated_audio_stream)
+            
+            print("✅ Voice isolation completed")
+            return isolated_bytes
+            
+        except Exception as e:
+            print(f"⚠️  Voice isolation error: {e}, using original audio")
+            return audio_bytes
+
     async def process_buffer(self) -> List[TranscriptSegment]:
         """Send buffered audio to ElevenLabs and get results."""
 
@@ -63,6 +97,16 @@ class ElevenLabsTranscriber:
 
             # Convert to bytes (16-bit PCM)
             audio_bytes = combined.tobytes()
+            
+            # Apply voice isolation if enabled (returns WAV format)
+            if self.config.use_voice_isolation:
+                audio_bytes = await self.isolate_voice(audio_bytes)
+            else:
+                # Convert raw PCM to WAV format for consistency
+                audio_float = combined.astype(np.float32) / 32768.0
+                wav_buffer = BytesIO()
+                sf.write(wav_buffer, audio_float, self.config.sample_rate, format='WAV', subtype='PCM_16')
+                audio_bytes = wav_buffer.getvalue()
 
             # Get timing info
             start_timestamp = self.audio_buffer[0].timestamp
@@ -84,7 +128,7 @@ class ElevenLabsTranscriber:
                 "diarize": "true",  # Enable speaker diarization
                 "num_speakers": 5,  # Allow up to 5 speakers
                 "timestamps_granularity": "word",
-                "file_format": "pcm_s16le_16",  # 16-bit PCM at 16kHz
+                # No file_format parameter - let API auto-detect WAV format
             }
 
             # Send request
