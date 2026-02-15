@@ -2,6 +2,12 @@
 
 **Deafine** is a simple Python accessibility tool that provides real-time speaker diarization and live transcription using ElevenLabs API for deaf and hard-of-hearing users.
 
+## Demo
+
+[![Watch the demo](https://img.youtube.com/vi/YRpaRdVLRJs/maxresdefault.jpg)](https://www.youtube.com/watch?v=YRpaRdVLRJs)
+
+> Click the image above to watch the demo on YouTube.
+
 ## Features
 
 - 🎤 **Real-time microphone capture** (Console mode)
