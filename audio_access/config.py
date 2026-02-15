@@ -35,6 +35,13 @@ class Config:
     sample_rate: int = 16000
     channels: int = 1
 
+    # Translation settings
+    target_language: str = os.getenv("DEAFINE_TARGET_LANGUAGE", "en")
+    auto_translate: bool = (
+        os.getenv("DEAFINE_AUTO_TRANSLATE", "false").lower() == "true"
+    )
+    translation_email: str = os.getenv("DEAFINE_TRANSLATION_EMAIL", "")
+
     def __post_init__(self):
         """Validate configuration."""
         if not self.eleven_api_key:

@@ -33,12 +33,91 @@ class ElevenLabsTranscriber:
         self.speaker_mapping: Dict[str, str] = {}
         self.next_speaker_num = 1
 
+        # Translation settings
+        self.target_language = config.target_language
+        self.auto_translate = config.auto_translate
+        self.translation_email = config.translation_email
+        
+        if self.auto_translate:
+            print(f"✅ Translation enabled (target: {self.target_language})")
+            print("   Using: MyMemory Translator (free, 1000 words/day)")
+
     def _get_simple_speaker_id(self, elevenlabs_id: str) -> str:
         """Map ElevenLabs speaker ID to simple S1, S2, etc."""
         if elevenlabs_id not in self.speaker_mapping:
             self.speaker_mapping[elevenlabs_id] = f"S{self.next_speaker_num}"
             self.next_speaker_num += 1
         return self.speaker_mapping[elevenlabs_id]
+
+    async def translate_text(self, text: str, source_lang: str = "auto") -> str:
+        """Translate text using MyMemory Translator API."""
+        if not self.auto_translate or not text.strip():
+            return text
+        
+        try:
+            # Map 3-letter ISO codes to 2-letter codes (ElevenLabs uses ISO 639-3)
+            lang_code_map = {
+                "hin": "hi", "eng": "en", "spa": "es", "fra": "fr", "deu": "de",
+                "ita": "it", "por": "pt", "rus": "ru", "jpn": "ja", "zho": "zh",
+                "ara": "ar", "kor": "ko", "nld": "nl", "pol": "pl", "tur": "tr",
+                "ben": "bn", "tel": "te", "mar": "mr", "tam": "ta", "urd": "ur",
+                "guj": "gu", "kan": "kn", "mal": "ml", "pan": "pa", "ori": "or",
+                "vie": "vi", "tha": "th", "ind": "id", "msa": "ms", "fil": "tl",
+                "ukr": "uk", "ces": "cs", "ron": "ro", "hun": "hu", "swe": "sv",
+                "dan": "da", "fin": "fi", "nor": "no", "ell": "el", "heb": "he"
+            }
+            
+            # Normalize source language code
+            if source_lang != "auto":
+                source_code = lang_code_map.get(source_lang.lower(), source_lang[:2].lower())
+            else:
+                source_code = "auto"
+            
+            # Normalize target language code
+            target_code = lang_code_map.get(self.target_language.lower(), self.target_language[:2].lower())
+            
+            # If source language is same as target, skip translation
+            if source_code != "auto" and source_code == target_code:
+                return text
+            
+            # Prepare MyMemory API request
+            # API: https://api.mymemory.translated.net/get?q=text&langpair=source|target
+            url = "https://api.mymemory.translated.net/get"
+            params = {
+                "q": text,
+                "langpair": f"{source_code}|{target_code}"
+            }
+            
+            # Add email for higher rate limits (optional)
+            if self.translation_email:
+                params["de"] = self.translation_email
+            
+            # Make translation request
+            response = await self.client.get(
+                url,
+                params=params,
+                timeout=10.0
+            )
+            response.raise_for_status()
+            
+            result = response.json()
+            
+            # MyMemory response format: {"responseData":{"translatedText":"..."}}
+            if "responseData" in result and "translatedText" in result["responseData"]:
+                translated = result["responseData"]["translatedText"]
+                
+                if translated and translated != text:
+                    print(f"🌐 Translated {source_code}→{target_code}")
+                    return translated
+            
+            return text
+            
+        except httpx.HTTPStatusError as e:
+            print(f"⚠️  Translation API error ({e.response.status_code})")
+            return text
+        except Exception as e:
+            print(f"⚠️  Translation error: {e}")
+            return text
 
     async def add_audio(self, frame: AudioFrame):
         """Add audio frame to buffer."""
@@ -141,6 +220,12 @@ class ElevenLabsTranscriber:
 
             # Debug: print response structure
             print(f"📥 Response keys: {list(result.keys())}")
+            
+            # Detect language from response
+            detected_language = result.get("language_code", "auto")
+            if detected_language and detected_language != "auto":
+                print(f"🗣️  Detected language: {detected_language}")
+            
             if "words" in result and result["words"]:
                 print(f"   Found {len(result['words'])} words")
                 # Check unique speakers
@@ -173,11 +258,14 @@ class ElevenLabsTranscriber:
                         if current_speaker is not None and current_words:
                             speaker_id = self._get_simple_speaker_id(current_speaker)
                             text = " ".join(current_words)
+                            
+                            # Translate if needed
+                            translated_text = await self.translate_text(text, detected_language)
 
                             segments.append(
                                 TranscriptSegment(
                                     speaker_id=speaker_id,
-                                    text=text,
+                                    text=translated_text,
                                     start_time=start_timestamp + current_start,
                                     end_time=start_timestamp + current_end,
                                     words=[],
@@ -198,11 +286,14 @@ class ElevenLabsTranscriber:
                 if current_speaker is not None and current_words:
                     speaker_id = self._get_simple_speaker_id(current_speaker)
                     text = " ".join(current_words)
+                    
+                    # Translate if needed
+                    translated_text = await self.translate_text(text, detected_language)
 
                     segments.append(
                         TranscriptSegment(
                             speaker_id=speaker_id,
-                            text=text,
+                            text=translated_text,
                             start_time=start_timestamp + current_start,
                             end_time=start_timestamp + current_end,
                             words=[],
@@ -211,10 +302,13 @@ class ElevenLabsTranscriber:
 
             elif "text" in result and result["text"]:
                 # Fallback: no word-level data, just full text
+                original_text = result["text"]
+                translated_text = await self.translate_text(original_text, detected_language)
+                
                 segments.append(
                     TranscriptSegment(
                         speaker_id="S1",
-                        text=result["text"],
+                        text=translated_text,
                         start_time=start_timestamp,
                         end_time=end_timestamp,
                         words=[],
@@ -229,10 +323,8 @@ class ElevenLabsTranscriber:
 
             if segments:
                 print(f"✅ Transcribed {len(segments)} segment(s)")
-                for seg in segments:
-                    print(f"   {seg.speaker_id}: {seg.text[:50]}...")
             else:
-                print(f"⚠️  No transcription returned (possibly silence)")
+                print("No transcription returned (possibly silence)")
 
             return segments
 

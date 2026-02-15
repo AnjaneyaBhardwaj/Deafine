@@ -8,6 +8,7 @@
 - 🌐 **WebSocket API** - Stream audio from browser for live transcription
 - 👥 **Automatic multi-speaker detection** (S1, S2, S3...) via ElevenLabs
 - 📝 **Live transcription** with speaker labels (full text, not summarized)
+- 🌍 **Automatic translation** - Translate transcripts to your language (optional)
 - 🔀 **Overlap detection** when multiple speakers talk simultaneously
 - 💾 **Optional recording** to save audio and transcripts
 - 📊 **Session summaries** - Generated when closing (overall + per-speaker)
@@ -148,6 +149,45 @@ pip install webrtcvad
 
 The app works fine without VAD - it just sends all audio instead of filtering silence.
 
+### Optional: Automatic Translation
+
+To translate transcriptions to your preferred language in real-time using MyMemory Translator:
+
+Enable in `.env`:
+
+```bash
+DEAFINE_AUTO_TRANSLATE=true
+DEAFINE_TARGET_LANGUAGE=es  # Spanish, or any supported language
+```
+
+**MyMemory Translator (Free):**
+
+- 🆓 **No API key needed** - works out of the box
+- 📊 **Rate limits:** 1,000 words/day (free)
+- 📧 **Higher limits:** Add your email for 10,000 words/day
+- 🌐 **Supported languages:** 50+ languages including:
+  - English (en), Spanish (es), French (fr), German (de)
+  - Italian (it), Portuguese (pt), Russian (ru), Japanese (ja)
+  - Chinese (zh), Arabic (ar), Hindi (hi), Korean (ko)
+  - And many more!
+
+**How it works:**
+
+1. ElevenLabs detects the spoken language automatically
+2. If different from your target language, text is translated via MyMemory API
+3. No additional packages or setup needed
+
+**Example:**
+Someone speaks in Spanish → Transcribed in Spanish → Automatically translated to English (if target is `en`)
+
+**Optional - Higher limits:**
+
+```bash
+DEAFINE_TRANSLATION_EMAIL=your@email.com  # Get 10,000 words/day instead of 1,000
+```
+
+The app works fine without translation - transcripts will be in the original spoken language.
+
 ## CLI Options
 
 **Console Mode:**
@@ -199,6 +239,11 @@ DEAFINE_ELEVENLABS_CHUNK_SECS=5
 # Audio processing
 DEAFINE_CHUNK_MS=320
 DEAFINE_HOP_MS=160
+
+# Translation (optional - uses MyMemory Translator)
+DEAFINE_AUTO_TRANSLATE=false  # Set to true to enable
+DEAFINE_TARGET_LANGUAGE=en    # en, es, fr, de, it, pt, ru, ja, zh, ar, hi, ko, etc.
+DEAFINE_TRANSLATION_EMAIL=    # optional, for higher rate limits (10k words/day vs 1k)
 ```
 
 ## Session Summaries
