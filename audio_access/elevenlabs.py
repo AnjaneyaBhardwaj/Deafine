@@ -3,9 +3,6 @@
 import httpx
 import numpy as np
 from typing import Dict, List
-import time
-import io
-
 from .config import Config
 from .events import AudioFrame, TranscriptSegment
 
@@ -72,7 +69,7 @@ class ElevenLabsTranscriber:
             end_timestamp = self.audio_buffer[-1].timestamp
 
             print(
-                f"📤 Sending {len(audio_bytes)} bytes ({end_timestamp - start_timestamp:.1f}s of audio) to ElevenLabs..."
+                f"Sending {len(audio_bytes)} bytes ({end_timestamp - start_timestamp:.1f}s of audio) to ElevenLabs..."
             )
 
             # Prepare request to Speech-to-Text endpoint
@@ -85,7 +82,7 @@ class ElevenLabsTranscriber:
             data = {
                 "model_id": "scribe_v1",
                 "diarize": "true",  # Enable speaker diarization
-                "num_speakers": 5",  # Allow up to 5 speakers
+                "num_speakers": 5,  # Allow up to 5 speakers
                 "timestamps_granularity": "word",
                 "file_format": "pcm_s16le_16",  # 16-bit PCM at 16kHz
             }
