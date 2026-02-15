@@ -8,8 +8,6 @@ from rich.text import Text
 from typing import Dict
 import time
 
-# from .events import TranscriptSegment
-
 
 class SpeakerDisplay:
     """Display information for a single speaker."""

@@ -126,7 +126,7 @@ class ElevenLabsTranscriber:
             data = {
                 "model_id": "scribe_v1",
                 "diarize": "true",  # Enable speaker diarization
-                "num_speakers": 5,  # Allow up to 5 speakers
+                "num_speakers": self.config.num_speakers,
                 "timestamps_granularity": "word",
                 # No file_format parameter - let API auto-detect WAV format
             }

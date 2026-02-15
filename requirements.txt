@@ -11,8 +11,8 @@ elevenlabs>=2.35.0
 # Uncomment to enable (requires C++ compiler on Windows):
 # webrtcvad>=2.0.10
 
-langchain
-langchain-openai
+langchain>=0.3.27
+langchain-openai>=0.3.35
 
 fastapi
 uvicorn[standard]

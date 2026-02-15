@@ -29,6 +29,7 @@ class Config:
     use_voice_isolation: bool = (
         os.getenv("DEAFINE_USE_VOICE_ISOLATION", "true").lower() == "true"
     )
+    num_speakers: int = int(os.getenv("DEAFINE_NUM_SPEAKERS", "2"))
 
     # Audio settings
     sample_rate: int = 16000
